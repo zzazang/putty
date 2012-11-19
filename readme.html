@@ -1,0 +1,151 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+	<meta http-equiv="content-type" content="application/xhtml+xml; charset=utf-8" />
+	<meta http-equiv="content-language" content="en" />
+	
+	<title>PuTTY for win32 storing configuration into file</title>
+	
+</head>
+
+<body>
+
+<h1>PuTTY for win32 storing configuration into file</h1>
+
+<p>
+	Up-to-date here: <a href="http://jakub.kotrla.net/putty">http://jakub.kotrla.net/putty</a>.
+</p>
+
+<p>
+	<a href="http://www.movavi.com/opensource/win32putty-be">Belorussian translation - Пераклад на беларускую мову</a>
+</p>
+
+
+<h2>Information</h2>
+
+<p>
+	<a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/">PuTTY</a> is a great free telnet/ssh client for Win32 and Unix platforms.
+	It's just one "exe", no install, no extra dlls are required.
+	So it can be run from floppy, usb flash disk etc.
+</p><p>
+	But it stores all configuration into registry ([HKEY_CURRENT_USER\Software\SimonTatham\PuTTY]) - you cannot store/load it from file on the floppy or other removable devices.
+	There is a <a href="http://the.earth.li/~sgtatham/putty/0.58/htmldoc/Chapter4.html#config-file">workaround with bat/reg files</a>
+	but that isn't very nice. So I've rewritten small part of PuTTY (winstore.c - functions which handle storing/loading configuration).
+</p><p>
+	I've rewritten small part of Pageant too, to be able to load list of stored session (winpgnt.c - function <em>update_sessions</em>).
+</p><p>
+	If you find a bug related to storing/loading configuration or not present in original PuTTY
+	feel free to e-mail it to <a href="mailto:jakub@kotrla.net">jakub@kotrla.net</a>.
+	My modification to PuTTY is under same <a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/licence.html">licence as PuTTY</a>
+	- you can do anything with it but at your own risk and without any warranty.
+</p>
+
+<h2>Documentation</h2>
+
+<p>
+	This PuTTY stores its configuration (sessions, ssh host keys, random seed file path) to file instead of registry.
+	Every session and ssh host key is stored in a separate file. Default paths are (where <em>.</em> represents executable directory):
+	<ul>
+		<li>./sessions/<em>packedSessionName</em></li>
+		<li>./sshhostkeys/<em>packedHostName</em></li>
+		<li>./putty.rnd</li>
+	</ul>
+</p>
+<p>
+	Path for saving configuration can be set via file <em>putty.conf</em>. Current working directory is searched first, if <em>putty.conf</em> is not found there,
+	executable directory (same directory as putty/pscp/psftp/plink/pageant.exe) is searched. 
+	<em>putty.conf</em> should look like this (if it's not found defaults are used):
+	<pre>
+		;comment line
+		sessions=%SYSTEMROOT%\ses
+		sshhostkeys=\ssh\hostkeys
+		seedfile=C:\putty.rnd
+		sessionsuffix=.session
+		keysuffix=.hostkey
+		jumplist=jumplist.txt
+	</pre>
+</p>
+<p>
+	You can use enviroment variables in config (like %SYSTEMROOT%) - string will be expanded via ExpandEnviromentString WinAPI function
+	(user-specific variables are not supported yet).
+</p>
+<p>
+	<code>sessionsuffix</code> and <code>keysuffix</code> are optional, defaults are empty. If set, every file has a suffix as defined
+	(saved sessions via <code>sessionsuffix</code> and ssh host keys via <code>keysuffix</code>).
+	Primary purpose is to avoid "<code>*.com</code>" files from names like <code>ssh.domain.com</code>.
+	Both are limited to 15 characters.
+	<br>
+	<strong style="color:red;">Warning:</strong> if you already have saved some sessions or ssh host keys and you change these suffixes,
+	you have to manually rename (append them to) all files.
+</p>
+<p>
+	Jumplist is new feature in Windows 7 supported by PuTTY 0.61. Because this PuTTY should be lightweight, if you do not set path to jumplist, none will be created.
+</p>
+<p>
+	This PuTTY is still able to load configuration from registry. Sessions loaded from registry are marked [registry].
+	When PuTTY is checking ssh host key and it's not found in file but in registry, you can move/copy key to file
+	(or of course do nothing).
+</p>
+<p>
+	Pageant loads list of saved sessions from path set in <em>putty.conf</em>, defaults is ./sessions/<em>packedSessionName</em>
+	- it works the same way as PuTTY (including <code>keysuffix</code> setting).
+</p>
+
+<h2>ChangeLog</h2>
+<p>
+	This PuTTY is still evolving, since the first simple release I've added some features and fixed a few bugs.
+	So I've just started numbering versions. Every future change, feature and bugfix will appear here.
+</p>
+<ul>
+	<li>24. 11. 2005 - first version 0.1.1</li>
+	<li>22. 3. 2006 - PSCP, PSFTP compiled &amp; added</li>
+	<li>22. 3. 2006 - fixed Pageant to work with <code>sessionsuffix</code> correctly (version 0.1.2)</li>
+	<li>7. 8. 2006 - fixed PSCP when loading non-existent settings silently &amp; null handle bug fixed (version 0.1.3)</li>
+	<li>9. 8. 2006 - much better &quot;putty.exe directory&quot; detection added (version 0.1.5)</li>
+	<li>29. 9. 2006 - PLINK compiled &amp; added</li>
+	<li>9. 1. 2007 - fixed to save/load Default Settings (version 0.1.6)</li>
+	<li>25. 1. 2007 - Update: this modified PuTTY is now based on PuTTY 0.59 &amp; minor memory leak fixed (version 0.2)</li>
+	<li>24. 3. 2007 - Support for enviroment variables in config file &amp; code clean-up (version 0.2.1)</li>
+	<li>1. 5. 2007 - Update: this modified PuTTY is now based on PuTTY 0.60 (version 0.3)</li>
+	<li>15. 10. 2007 - fixed showing &quot;.&quot; and &quot;..&quot; sessions in session list (version 0.3.1)</li>
+	<li>6. 3. 2008 - fixed crash if config file does not end with blank line (version 0.3.2)</li>
+	<li>12. 8. 2008 - since now: change in handling <em>putty.conf</em> and working/executable directories</li>
+	<li>4. 9. 2008 - pageant starts putty.exe in its (pageant's) working directory &amp; XP and Vista visual styles supported (version 0.3.5)</li>
+	<li>28. 7. 2009 - fixed session deletion when sessionsuffix set in PuTTY (version 0.3.6)</li>
+	<li>4. 9. 2009 - if seesion not found on disk, try in registry (for WinSCP support), fixed minor bug with CurrentDirectory (version 0.3.7)</li>
+	<li>7. 11. 2009 - Support for enviroment variables in session files (version 0.3.8)</li>
+	<li>12. 1. 2010 - fixed loading of session with names containing colon(:) and other weird characters (version 0.3.9)</li>
+	<li>24. 8. 2011 - Update: this modified PuTTY is now based on PuTTY 0.61 (version 0.4), support for Win7 jumplist</li>
+	<li>23. 2. 2012 - Update: this modified PuTTY is now based on PuTTY 0.62 (version 0.5)</li>
+</ul>
+
+<h2>Donate</h2>
+<p>
+	If you find my patch useful, I'll be happy if you say thanks in some other way:
+</p>
+<form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+<input type="hidden" name="cmd" value="_s-xclick">
+<input type="image" src="https://www.paypal.com/en_US/i/btn/x-click-but21.gif" border="0" name="submit" alt="Make payments with PayPal - it's fast, free and secure!">
+<img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1">
+<input type="hidden" name="encrypted" value="-----BEGIN PKCS7-----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-----END PKCS7-----
+">
+</form>
+
+
+
+<h2>Thanks</h2>
+<p>
+	Thanks to Sebastian Juerges, Sebastian Królak, Scott Akesson, Przemysław Sztoch, James Hoffman, Jones Down, Harold Hunt,
+	Dmitry Gromov, Gorkum L. van, Kyle Brazell, Sergey Makarenko, Anthony Valentine, Jason K Larson,
+	tzeentch and Quip for testing and ideas.
+</p>
+
+<hr />
+<p>
+	Last update 22:07, 23. 2. 2012 (GMT +1:00 Prague) - actual with original PuTTY version 0.62
+</p>
+	
+</body>
+</html>
